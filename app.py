@@ -1,8 +1,14 @@
 from flask import Flask, request, send_file, render_template
 import pandas as pd
 import io
+from datetime import datetime
 
 app = Flask(__name__)
+
+ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
+
+def is_excel(filename):
+    return any(filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS)
 
 @app.route('/')
 def index():
@@ -16,9 +22,17 @@ def process():
     if not warehouse_file or not branch_file:
         return 'يرجى رفع الملفين', 400
 
-    # Read files
-    warehouse = pd.read_excel(warehouse_file)
-    branch = pd.read_excel(branch_file)
+    if not is_excel(warehouse_file.filename):
+        return 'ملف المستودع يجب أن يكون Excel (.xlsx أو .xls)', 400
+
+    if not is_excel(branch_file.filename):
+        return 'ملف الفرع يجب أن يكون Excel (.xlsx أو .xls)', 400
+
+    try:
+        warehouse = pd.read_excel(warehouse_file)
+        branch = pd.read_excel(branch_file)
+    except Exception:
+        return 'تعذر قراءة أحد الملفات، تأكد أنهما ملفات Excel صحيحة', 400
 
     # Clean column names
     warehouse.columns = warehouse.columns.str.strip()
@@ -77,11 +91,13 @@ def process():
                     worksheet.cell(row=row, column=col).fill = light_fill
 
     output.seek(0)
+    today = datetime.now().strftime('%d-%m-%Y')
+    filename = f'الاحتياجات_{today}.xlsx'
     return send_file(
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name='الاحتياجات_من_المستودع.xlsx'
+        download_name=filename
     )
 
 if __name__ == '__main__':
