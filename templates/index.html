@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>احتياجات الفرع من المستودع</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Cairo', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f2942 0%, #1a4a7a 50%, #0d3558 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .wrapper {
+            width: 100%;
+            max-width: 560px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .header .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #a8d4f5;
+            font-size: 13px;
+            padding: 6px 16px;
+            border-radius: 100px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.6);
+            font-size: 15px;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255,255,255,0.97);
+            border-radius: 24px;
+            padding: 36px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.1);
+        }
+
+        /* Steps */
+        .steps {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 28px;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+        }
+
+        .step-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e8f0fe;
+            color: #1F4E79;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 6px;
+        }
+
+        .step.active .step-num {
+            background: #1F4E79;
+            color: white;
+        }
+
+        .step.done .step-num {
+            background: #27AE60;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: #999;
+            font-weight: 600;
+        }
+
+        .step.active .step-label { color: #1F4E79; }
+        .step.done .step-label { color: #27AE60; }
+
+        .step-line {
+            flex: 0.5;
+            height: 2px;
+            background: #e8f0fe;
+            margin-bottom: 18px;
+        }
+
+        .step-line.done { background: #27AE60; }
+
+        /* Upload sections */
+        .upload-section {
+            margin-bottom: 18px;
+        }
+
+        .section-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .section-label .badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .badge-blue { background: #EBF3FB; }
+        .badge-green { background: #EAFAF1; }
+
+        .section-label span {
+            font-weight: 700;
+            color: #1a1a2e;
+            font-size: 15px;
+        }
+
+        .section-label .tag {
+            margin-right: auto;
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-weight: 600;
+        }
+
+        .tag-blue { background: #EBF3FB; color: #1F4E79; }
+        .tag-green { background: #EAFAF1; color: #27AE60; }
+
+        /* Upload box */
+        .upload-box {
+            border: 2px dashed #d0dce8;
+            border-radius: 14px;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            background: #fafcff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 60%, rgba(31,78,121,0.03));
+            pointer-events: none;
+        }
+
+        .upload-box input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .upload-box:hover {
+            border-color: #1F4E79;
+            background: #f0f7ff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(31,78,121,0.1);
+        }
+
+        .upload-box.active {
+            border-color: #27AE60;
+            border-style: solid;
+            background: #f0fdf4;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(39,174,96,0.12);
+        }
+
+        .upload-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin: 0 auto 10px;
+            transition: all 0.25s;
+        }
+
+        .icon-wrap-blue { background: #EBF3FB; }
+        .icon-wrap-green-bg { background: #EAFAF1; }
+        .upload-box.active .upload-icon-wrap { background: #dcfce7; }
+
+        .upload-main-text {
+            font-size: 14px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 3px;
+        }
+
+        .upload-sub-text {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .file-selected {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-top: 10px;
+        }
+
+        .upload-box.active .file-selected { display: flex; }
+        .upload-box.active .upload-content { display: none; }
+
+        .file-selected .check {
+            width: 28px;
+            height: 28px;
+            background: #27AE60;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .file-selected .file-info { text-align: right; flex: 1; overflow: hidden; }
+        .file-selected .fname {
+            font-size: 13px;
+            font-weight: 700;
+            color: #166534;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-selected .fchange { font-size: 11px; color: #6b7280; }
+
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 6px 0;
+            color: #cbd5e0;
+            font-size: 12px;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        /* Submit button */
+        .btn-wrap { margin-top: 20px; }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #1F4E79, #2874a6);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(31,78,121,0.3);
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+            pointer-events: none;
+        }
+
+        .btn:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(31,78,121,0.4);
+        }
+
+        .btn:not(:disabled):active { transform: translateY(0); }
+
+        .btn:disabled {
+            background: linear-gradient(135deg, #94a3b8, #b0bec5);
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .btn-icon { font-size: 18px; }
+
+        /* Loading overlay */
+        .loading {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 24px;
+            background: #f8faff;
+            border-radius: 14px;
+            margin-top: 16px;
+            border: 1px solid #e2eaf5;
+        }
+
+        .loading-bar {
+            width: 100%;
+            height: 4px;
+            background: #e2eaf5;
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .loading-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1F4E79, #27AE60, #1F4E79);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s linear infinite;
+            border-radius: 100px;
+            width: 60%;
+        }
+
+        @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+        .loading-text {
+            font-size: 14px;
+            color: #4a6fa5;
+            font-weight: 600;
+        }
+
+        /* Success */
+        .success {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 20px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 14px;
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .success-icon {
+            width: 48px;
+            height: 48px;
+            background: #27AE60;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: white;
+        }
+
+        .success-title { font-size: 16px; font-weight: 700; color: #166534; }
+        .success-sub { font-size: 13px; color: #6b7280; }
+
+        /* Error */
+        .error {
+            display: none;
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            color: #c53030;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-top: 16px;
+            font-size: 14px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255,255,255,0.35);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Header -->
+        <div class="header">
+            <div class="pill">
+                <span>💊</span>
+                <span>نظام إدارة مخزون الصيدليات</span>
+            </div>
+            <h1>احتياجات الفرع من المستودع</h1>
+            <p>ارفع ملفي المستودع والفرع واحصل على قائمة الاحتياجات فوراً</p>
+        </div>
+
+        <!-- Card -->
+        <div class="card">
+
+            <!-- Steps -->
+            <div class="steps">
+                <div class="step active" id="step1">
+                    <div class="step-num">1</div>
+                    <div class="step-label">رفع الملفات</div>
+                </div>
+                <div class="step-line" id="line1"></div>
+                <div class="step" id="step2">
+                    <div class="step-num">2</div>
+                    <div class="step-label">المعالجة</div>
+                </div>
+                <div class="step-line" id="line2"></div>
+                <div class="step" id="step3">
+                    <div class="step-num">3</div>
+                    <div class="step-label">التحميل</div>
+                </div>
+            </div>
+
+            <form id="uploadForm">
+                <!-- Warehouse -->
+                <div class="upload-section">
+                    <div class="section-label">
+                        <div class="badge badge-blue">📦</div>
+                        <span>شيت المستودع</span>
+                        <span class="tag tag-blue">المرجع الرئيسي</span>
+                    </div>
+                    <div class="upload-box" id="box1">
+                        <input type="file" name="warehouse" id="file1">
+                        <div class="upload-content">
+                            <div class="upload-icon-wrap icon-wrap-blue">📦</div>
+                            <div class="upload-main-text">اضغط لاختيار ملف Excel</div>
+                            <div class="upload-sub-text">يحتوي على أرصدة المستودع</div>
+                        </div>
+                        <div class="file-selected">
+                            <div class="check">✓</div>
+                            <div class="file-info">
+                                <div class="fname" id="name1"></div>
+                                <div class="fchange">اضغط لتغيير الملف</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divider">ثم</div>
+
+                <!-- Branch -->
+                <div class="upload-section">
+                    <div class="section-label">
+                        <div class="badge badge-green">🏪</div>
+                        <span>شيت الفرع</span>
+                        <span class="tag tag-green">رصيد الصيدلية</span>
+                    </div>
+                    <div class="upload-box" id="box2">
+                        <input type="file" name="branch" id="file2">
+                        <div class="upload-content">
+                            <div class="upload-icon-wrap icon-wrap-green-bg">🏪</div>
+                            <div class="upload-main-text">اضغط لاختيار ملف Excel</div>
+                            <div class="upload-sub-text">يحتوي على أصناف الفرع الحالية</div>
+                        </div>
+                        <div class="file-selected">
+                            <div class="check">✓</div>
+                            <div class="file-info">
+                                <div class="fname" id="name2"></div>
+                                <div class="fchange">اضغط لتغيير الملف</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-wrap">
+                    <button type="submit" class="btn" id="submitBtn" disabled>
+                        <span class="btn-icon">⬇</span>
+                        <span>استخرج قائمة الاحتياجات</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="loading-bar"><div class="loading-fill"></div></div>
+                <div class="loading-text">جاري مقارنة الأرصدة واستخراج الاحتياجات...</div>
+            </div>
+
+            <!-- Success -->
+            <div class="success" id="success">
+                <div class="success-icon">✓</div>
+                <div class="success-title" id="successMsg">تم بنجاح! جاري التحميل...</div>
+                <div class="success-sub">تحقق من مجلد التنزيلات</div>
+            </div>
+
+            <!-- Error -->
+            <div class="error" id="error"></div>
+        </div>
+
+        <div class="footer">نظام احتياجات الفروع · تطوير داخلي</div>
+    </div>
+
+    <script>
+        const file1 = document.getElementById('file1');
+        const file2 = document.getElementById('file2');
+        const btn = document.getElementById('submitBtn');
+
+        function handleFile(input, boxId, nameId) {
+            input.addEventListener('change', () => {
+                const name = input.files[0]?.name;
+                document.getElementById(nameId).textContent = name || '';
+                document.getElementById(boxId).classList.toggle('active', !!name);
+                btn.disabled = !(file1.files[0] && file2.files[0]);
+            });
+        }
+
+        handleFile(file1, 'box1', 'name1');
+        handleFile(file2, 'box2', 'name2');
+
+        function setStep(n) {
+            [1,2,3].forEach(i => {
+                const s = document.getElementById('step' + i);
+                s.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+            });
+            [1,2].forEach(i => {
+                const l = document.getElementById('line' + i);
+                l.className = 'step-line' + (i < n ? ' done' : '');
+            });
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const success = document.getElementById('success');
+
+            btn.disabled = true;
+            loading.style.display = 'flex';
+            error.style.display = 'none';
+            success.style.display = 'none';
+            setStep(2);
+
+            const formData = new FormData(e.target);
+
+            try {
+                const res = await fetch('/process', { method: 'POST', body: formData });
+
+                if (!res.ok) {
+                    const msg = await res.text();
+                    throw new Error(msg);
+                }
+
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'الاحتياجات_من_المستودع.xlsx';
+                a.click();
+                URL.revokeObjectURL(url);
+
+                setStep(3);
+                success.style.display = 'flex';
+            } catch (err) {
+                error.textContent = 'حدث خطأ: ' + err.message;
+                error.style.display = 'block';
+                setStep(1);
+            } finally {
+                loading.style.display = 'none';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
