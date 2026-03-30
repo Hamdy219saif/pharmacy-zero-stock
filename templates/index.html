@@ -9,6 +9,37 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* Wake-up splash */
+        #wakeup {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0f2942, #1a4a7a);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        #wakeup.hidden { opacity: 0; pointer-events: none; }
+        #wakeup .wu-icon { font-size: 56px; animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        #wakeup .wu-title { color: #fff; font-size: 20px; font-weight: 700; font-family: 'Cairo', sans-serif; }
+        #wakeup .wu-sub { color: rgba(255,255,255,0.6); font-size: 14px; font-family: 'Cairo', sans-serif; }
+        #wakeup .wu-bar {
+            width: 200px; height: 4px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 100px; overflow: hidden;
+        }
+        #wakeup .wu-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #27AE60, #2ecc71);
+            border-radius: 100px;
+            animation: grow 3s ease-in-out forwards;
+        }
+        @keyframes grow { from { width: 0%; } to { width: 90%; } }
+
         body {
             font-family: 'Cairo', 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #0f2942 0%, #1a4a7a 50%, #0d3558 100%);
@@ -428,6 +459,14 @@
     </style>
 </head>
 <body>
+    <!-- Wake-up splash -->
+    <div id="wakeup">
+        <div class="wu-icon">💊</div>
+        <div class="wu-title">جاري تشغيل النظام...</div>
+        <div class="wu-bar"><div class="wu-fill"></div></div>
+        <div class="wu-sub">يستغرق أول تشغيل حوالي 30 ثانية</div>
+    </div>
+
     <div class="wrapper">
         <!-- Header -->
         <div class="header">
@@ -540,6 +579,13 @@
     </div>
 
     <script>
+        // Hide wakeup splash once page is fully loaded
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('wakeup').classList.add('hidden');
+            }, 800);
+        });
+
         const file1 = document.getElementById('file1');
         const file2 = document.getElementById('file2');
         const btn = document.getElementById('submitBtn');
