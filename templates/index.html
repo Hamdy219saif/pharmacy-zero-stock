@@ -239,6 +239,21 @@
             box-shadow: 0 4px 16px rgba(39,174,96,0.12);
         }
 
+        .upload-box.invalid {
+            border-color: #e53e3e;
+            border-style: solid;
+            background: #fff5f5;
+        }
+
+        .invalid-msg {
+            display: none;
+            color: #e53e3e;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 6px;
+            text-align: center;
+        }
+
         .upload-icon-wrap {
             width: 48px;
             height: 48px;
@@ -522,6 +537,7 @@
                             </div>
                         </div>
                     </div>
+                    <div class="invalid-msg" id="err1">⚠️ يجب أن يكون الملف Excel (.xlsx أو .xls)</div>
                 </div>
 
                 <div class="divider">ثم</div>
@@ -548,6 +564,7 @@
                             </div>
                         </div>
                     </div>
+                    <div class="invalid-msg" id="err2">⚠️ يجب أن يكون الملف Excel (.xlsx أو .xls)</div>
                 </div>
 
                 <div class="btn-wrap">
@@ -590,17 +607,35 @@
         const file2 = document.getElementById('file2');
         const btn = document.getElementById('submitBtn');
 
-        function handleFile(input, boxId, nameId) {
+        function isExcel(filename) {
+            return filename.toLowerCase().endsWith('.xlsx') || filename.toLowerCase().endsWith('.xls');
+        }
+
+        function handleFile(input, boxId, nameId, errId) {
             input.addEventListener('change', () => {
-                const name = input.files[0]?.name;
-                document.getElementById(nameId).textContent = name || '';
-                document.getElementById(boxId).classList.toggle('active', !!name);
+                const file = input.files[0];
+                const box = document.getElementById(boxId);
+                const errMsg = document.getElementById(errId);
+
+                if (!file) return;
+
+                if (!isExcel(file.name)) {
+                    box.classList.remove('active');
+                    box.classList.add('invalid');
+                    errMsg.style.display = 'block';
+                    input.value = '';
+                } else {
+                    box.classList.remove('invalid');
+                    box.classList.add('active');
+                    errMsg.style.display = 'none';
+                    document.getElementById(nameId).textContent = file.name;
+                }
                 btn.disabled = !(file1.files[0] && file2.files[0]);
             });
         }
 
-        handleFile(file1, 'box1', 'name1');
-        handleFile(file2, 'box2', 'name2');
+        handleFile(file1, 'box1', 'name1', 'err1');
+        handleFile(file2, 'box2', 'name2', 'err2');
 
         function setStep(n) {
             [1,2,3].forEach(i => {
