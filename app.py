@@ -9,6 +9,66 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
+# 🔥 قراءة الشيت بطريقة ذكية (تحديد الهيدر تلقائي)
+def smart_read_excel(file):
+    df = pd.read_excel(file, header=None)
+
+    header_row = None
+
+    for i, row in df.iterrows():
+        row_text = ' '.join(row.astype(str))
+        if 'كود' in row_text or 'رقم' in row_text:
+            header_row = i
+            break
+
+    if header_row is None:
+        raise Exception("Header not found")
+
+    df = pd.read_excel(file, header=header_row)
+    df.columns = df.columns.astype(str).str.strip()
+
+    return df
+
+# 🔥 تحديد عمود الكود (أرقام طويلة)
+def detect_code(df):
+    best_col = None
+    max_numeric = 0
+
+    for col in df.columns:
+        values = df[col].astype(str)
+        numeric_count = values.str.replace('.', '').str.isnumeric().sum()
+
+        if numeric_count > max_numeric:
+            max_numeric = numeric_count
+            best_col = col
+
+    return best_col
+
+# 🔥 تحديد الكمية (عمود رقمي)
+def detect_qty(df):
+    for col in df.columns:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            return col
+    return None
+
+# 🔥 تحديد اسم الصنف (فيه حروف)
+def detect_name(df, code_col):
+    best_col = None
+    max_text = 0
+
+    for col in df.columns:
+        if col == code_col:
+            continue
+
+        values = df[col].astype(str)
+        text_count = values.str.contains('[A-Za-zأ-ي]').sum()
+
+        if text_count > max_text:
+            max_text = text_count
+            best_col = col
+
+    return best_col
+
 @app.route('/process', methods=['POST'])
 def process():
     warehouse_file = request.files.get('warehouse')
@@ -18,54 +78,10 @@ def process():
         return 'يرجى رفع الملفين', 400
 
     try:
-        warehouse = pd.read_excel(warehouse_file)
-        branch = pd.read_excel(branch_file)
+        warehouse = smart_read_excel(warehouse_file)
+        branch = smart_read_excel(branch_file)
     except:
-        return 'خطأ في قراءة الملفات', 400
-
-    # تنظيف الأعمدة
-    warehouse.columns = warehouse.columns.astype(str).str.strip()
-    branch.columns = branch.columns.astype(str).str.strip()
-
-    # 🔥 تحديد عمود الكود (أرقام طويلة)
-    def detect_code(df):
-        best_col = None
-        max_numeric = 0
-
-        for col in df.columns:
-            values = df[col].astype(str)
-            numeric_count = values.str.replace('.', '').str.isnumeric().sum()
-
-            if numeric_count > max_numeric:
-                max_numeric = numeric_count
-                best_col = col
-
-        return best_col
-
-    # 🔥 تحديد عمود الكمية
-    def detect_qty(df):
-        for col in df.columns:
-            if pd.api.types.is_numeric_dtype(df[col]):
-                return col
-        return None
-
-    # 🔥 تحديد اسم الصنف (فيه حروف)
-    def detect_name(df, code_col):
-        best_col = None
-        max_text = 0
-
-        for col in df.columns:
-            if col == code_col:
-                continue
-
-            values = df[col].astype(str)
-            text_count = values.str.contains('[A-Za-zأ-ي]').sum()
-
-            if text_count > max_text:
-                max_text = text_count
-                best_col = col
-
-        return best_col
+        return "❌ فشل في قراءة الشيت (تأكد من الملف)", 400
 
     # تحديد الأعمدة
     w_code = detect_code(warehouse)
