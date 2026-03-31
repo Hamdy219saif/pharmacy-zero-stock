@@ -14,7 +14,7 @@ def smart_read_excel(file):
     header_row = 0
     for i, row in df.iterrows():
         text = ' '.join(row.astype(str))
-        if 'كود' in text or 'رقم' in text:
+        if any(k in text for k in ['كود', 'رقم', 'كوود', 'code', 'CODE']):
             header_row = i
             break
     df = pd.read_excel(file, header=header_row)
@@ -22,20 +22,27 @@ def smart_read_excel(file):
     return df
 
 def detect_code(df):
-    best_col = None
-    max_numeric = 0
+    # أولوية لأسماء الأعمدة
     for col in df.columns:
-        values = df[col].astype(str)
-        count = values.str.replace('.', '').str.isnumeric().sum()
-        if count > max_numeric:
-            max_numeric = count
+        if any(k in str(col) for k in ['كود', 'رقم', 'code', 'CODE']):
+            return col
+    # fallback: أكتر عمود فيه أرقام طويلة (أكواد)
+    best_col, max_count = None, 0
+    for col in df.columns:
+        vals = df[col].astype(str)
+        count = vals.str.replace('.', '', regex=False).str.isnumeric().sum()
+        if count > max_count:
+            max_count = count
             best_col = col
     return best_col
 
 def detect_qty(df, code_col=None):
+    qty_keywords = ['رصيد', 'كمية', 'كميه', 'المخزون', 'مخزون', 'العدد', 'متاح', 'qty', 'stock', 'balance', 'quantity']
+    # أولوية لاسم العمود
     for col in df.columns:
-        if any(k in str(col) for k in ['رصيد', 'كمية', 'qty', 'stock', 'balance']):
+        if any(k in str(col) for k in qty_keywords):
             return col
+    # fallback: عمود رقمي مش الكود وأرقامه صغيرة
     for col in df.columns:
         if col == code_col:
             continue
@@ -45,13 +52,11 @@ def detect_qty(df, code_col=None):
     return None
 
 def detect_name(df, code_col):
-    best_col = None
-    max_text = 0
+    best_col, max_text = None, 0
     for col in df.columns:
         if col == code_col:
             continue
-        values = df[col].astype(str)
-        text_count = values.str.contains('[A-Za-zأ-ي]').sum()
+        text_count = df[col].astype(str).str.contains('[A-Za-zأ-ي]', regex=True).sum()
         if text_count > max_text:
             max_text = text_count
             best_col = col
@@ -75,14 +80,14 @@ def process():
         name_col = detect_name(warehouse, w_code)
 
         if not w_code or not b_code:
-            return "❌ مش لاقي كود الصنف"
+            return f"❌ مش لاقي عمود الكود — أعمدة المستودع: {list(warehouse.columns)}"
         if not qty_col:
-            return "❌ مش لاقي عمود الكمية"
+            return f"❌ مش لاقي عمود الكمية — أعمدة المستودع: {list(warehouse.columns)}"
         if not name_col:
             name_col = warehouse.columns[0]
 
-        warehouse[w_code] = warehouse[w_code].astype(str)
-        branch[b_code] = branch[b_code].astype(str)
+        warehouse[w_code] = warehouse[w_code].astype(str).str.strip()
+        branch[b_code] = branch[b_code].astype(str).str.strip()
 
         warehouse_available = warehouse[pd.to_numeric(warehouse[qty_col], errors='coerce') > 0]
         branch_codes = set(branch[b_code].unique())
@@ -104,7 +109,7 @@ def process():
         )
 
     except Exception as e:
-        return f"🔥 حصل خطأ: {str(e)}"
+        return f"🔥 حصل خطأ: {str(e)} — أعمدة المستودع: {list(warehouse.columns) if 'warehouse' in dir() else 'غير محدد'}"
 
 if __name__ == '__main__':
     app.run(debug=True)
