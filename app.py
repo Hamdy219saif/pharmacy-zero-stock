@@ -9,62 +9,52 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
-# قراءة الشيت بشكل ذكي (يدور على الهيدر لو مش أول صف)
 def smart_read_excel(file):
     df = pd.read_excel(file, header=None)
-
     header_row = 0
     for i, row in df.iterrows():
         text = ' '.join(row.astype(str))
         if 'كود' in text or 'رقم' in text:
             header_row = i
             break
-
     df = pd.read_excel(file, header=header_row)
     df.columns = df.columns.astype(str).str.strip()
     return df
 
-# تحديد عمود الكود (أكتر عمود فيه أرقام)
 def detect_code(df):
     best_col = None
     max_numeric = 0
-
     for col in df.columns:
         values = df[col].astype(str)
         count = values.str.replace('.', '').str.isnumeric().sum()
-
         if count > max_numeric:
             max_numeric = count
             best_col = col
-
     return best_col
 
-# تحديد عمود الكمية
-def detect_qty(df):
+def detect_qty(df, code_col=None):
     for col in df.columns:
-        try:
-            if pd.to_numeric(df[col], errors='coerce').notna().sum() > 5:
-                return col
-        except:
-            pass
-    return None
-
-# تحديد اسم الصنف (عمود فيه حروف)
-def detect_name(df, code_col):
-    best_col = None
-    max_text = 0
-
+        if any(k in str(col) for k in ['رصيد', 'كمية', 'qty', 'stock', 'balance']):
+            return col
     for col in df.columns:
         if col == code_col:
             continue
+        nums = pd.to_numeric(df[col], errors='coerce').dropna()
+        if len(nums) > 5 and nums.median() < 100000:
+            return col
+    return None
 
+def detect_name(df, code_col):
+    best_col = None
+    max_text = 0
+    for col in df.columns:
+        if col == code_col:
+            continue
         values = df[col].astype(str)
         text_count = values.str.contains('[A-Za-zأ-ي]').sum()
-
         if text_count > max_text:
             max_text = text_count
             best_col = col
-
     return best_col
 
 @app.route('/process', methods=['POST'])
@@ -81,15 +71,13 @@ def process():
 
         w_code = detect_code(warehouse)
         b_code = detect_code(branch)
-        qty_col = detect_qty(warehouse)
+        qty_col = detect_qty(warehouse, w_code)
         name_col = detect_name(warehouse, w_code)
 
         if not w_code or not b_code:
             return "❌ مش لاقي كود الصنف"
-
         if not qty_col:
             return "❌ مش لاقي عمود الكمية"
-
         if not name_col:
             name_col = warehouse.columns[0]
 
