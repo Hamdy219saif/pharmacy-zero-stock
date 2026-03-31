@@ -9,49 +9,47 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
-# 🔥 قراءة الشيت بطريقة ذكية (تحديد الهيدر تلقائي)
+# قراءة الشيت بشكل ذكي (يدور على الهيدر لو مش أول صف)
 def smart_read_excel(file):
     df = pd.read_excel(file, header=None)
 
-    header_row = None
-
+    header_row = 0
     for i, row in df.iterrows():
-        row_text = ' '.join(row.astype(str))
-        if 'كود' in row_text or 'رقم' in row_text:
+        text = ' '.join(row.astype(str))
+        if 'كود' in text or 'رقم' in text:
             header_row = i
             break
 
-    if header_row is None:
-        raise Exception("Header not found")
-
     df = pd.read_excel(file, header=header_row)
     df.columns = df.columns.astype(str).str.strip()
-
     return df
 
-# 🔥 تحديد عمود الكود (أرقام طويلة)
+# تحديد عمود الكود (أكتر عمود فيه أرقام)
 def detect_code(df):
     best_col = None
     max_numeric = 0
 
     for col in df.columns:
         values = df[col].astype(str)
-        numeric_count = values.str.replace('.', '').str.isnumeric().sum()
+        count = values.str.replace('.', '').str.isnumeric().sum()
 
-        if numeric_count > max_numeric:
-            max_numeric = numeric_count
+        if count > max_numeric:
+            max_numeric = count
             best_col = col
 
     return best_col
 
-# 🔥 تحديد الكمية (عمود رقمي)
+# تحديد عمود الكمية
 def detect_qty(df):
     for col in df.columns:
-        if pd.api.types.is_numeric_dtype(df[col]):
-            return col
+        try:
+            if pd.to_numeric(df[col], errors='coerce').notna().sum() > 5:
+                return col
+        except:
+            pass
     return None
 
-# 🔥 تحديد اسم الصنف (فيه حروف)
+# تحديد اسم الصنف (عمود فيه حروف)
 def detect_name(df, code_col):
     best_col = None
     max_text = 0
@@ -71,58 +69,54 @@ def detect_name(df, code_col):
 
 @app.route('/process', methods=['POST'])
 def process():
-    warehouse_file = request.files.get('warehouse')
-    branch_file = request.files.get('branch')
-
-    if not warehouse_file or not branch_file:
-        return 'يرجى رفع الملفين', 400
-
     try:
+        warehouse_file = request.files.get('warehouse')
+        branch_file = request.files.get('branch')
+
+        if not warehouse_file or not branch_file:
+            return '❌ لازم ترفع الملفين'
+
         warehouse = smart_read_excel(warehouse_file)
         branch = smart_read_excel(branch_file)
-    except:
-        return "❌ فشل في قراءة الشيت (تأكد من الملف)", 400
 
-    # تحديد الأعمدة
-    w_code = detect_code(warehouse)
-    b_code = detect_code(branch)
-    qty_col = detect_qty(warehouse)
-    name_col = detect_name(warehouse, w_code)
+        w_code = detect_code(warehouse)
+        b_code = detect_code(branch)
+        qty_col = detect_qty(warehouse)
+        name_col = detect_name(warehouse, w_code)
 
-    if not w_code or not b_code:
-        return "❌ لم يتم تحديد عمود الكود"
+        if not w_code or not b_code:
+            return "❌ مش لاقي كود الصنف"
 
-    if not qty_col:
-        return "❌ لم يتم تحديد عمود الكمية"
+        if not qty_col:
+            return "❌ مش لاقي عمود الكمية"
 
-    if not name_col:
-        name_col = warehouse.columns[0]
+        if not name_col:
+            name_col = warehouse.columns[0]
 
-    # تجهيز البيانات
-    warehouse[w_code] = warehouse[w_code].astype(str)
-    branch[b_code] = branch[b_code].astype(str)
+        warehouse[w_code] = warehouse[w_code].astype(str)
+        branch[b_code] = branch[b_code].astype(str)
 
-    # فلترة
-    warehouse_available = warehouse[warehouse[qty_col] > 0]
-    branch_codes = set(branch[b_code].unique())
+        warehouse_available = warehouse[pd.to_numeric(warehouse[qty_col], errors='coerce') > 0]
+        branch_codes = set(branch[b_code].unique())
 
-    zero_at_branch = warehouse_available[
-        ~warehouse_available[w_code].isin(branch_codes)
-    ]
+        result = warehouse_available[
+            ~warehouse_available[w_code].isin(branch_codes)
+        ][[w_code, name_col, qty_col]].copy()
 
-    # النتيجة
-    result = zero_at_branch[[w_code, name_col, qty_col]].copy()
-    result.columns = ['كود الصنف', 'اسم الصنف', 'الكمية']
-    result = result.sort_values('اسم الصنف').reset_index(drop=True)
+        result.columns = ['كود الصنف', 'اسم الصنف', 'الكمية']
 
-    # إخراج Excel
-    output = io.BytesIO()
-    result.to_excel(output, index=False)
-    output.seek(0)
+        output = io.BytesIO()
+        result.to_excel(output, index=False)
+        output.seek(0)
 
-    filename = f'الاحتياجات_{datetime.now().strftime("%Y-%m-%d")}.xlsx'
+        return send_file(
+            output,
+            download_name=f"الاحتياجات_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
+            as_attachment=True
+        )
 
-    return send_file(output, download_name=filename, as_attachment=True)
+    except Exception as e:
+        return f"🔥 حصل خطأ: {str(e)}"
 
 if __name__ == '__main__':
     app.run(debug=True)
